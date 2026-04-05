@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>AI Voice Interview</title>
+  <style>
+    body { font-family: sans-serif; max-width: 400px; margin: 50px auto; padding: 20px; }
+    input, button { padding: 10px; margin: 5px; width: 100%; box-sizing: border-box; }
+    #status { margin-top: 10px; padding: 10px; background: #f0f0f0; }
+  </style>
+</head>
+<body>
+  <h1>AI Voice Interview</h1>
+  <input id="email" placeholder="Email" type="email">
+  <input id="pass" placeholder="Password" type="password">
+  <button onclick="signup()">Sign Up</button>
+  <button onclick="login()">Login</button>
+  <div id="status"></div>
+
+  <script>
+    const API_BASE = "http://127.0.0.1:8001";
+    
+    async function signup() {
+      const email = document.getElementById("email").value;
+      const pass = document.getElementById("pass").value;
+      document.getElementById("status").innerText = "Signing up...";
+      
+      try {
+        const res = await fetch(API_BASE + "/signup", {
+          method: "POST",
+          headers: {"Content-Type": "application/json"},
+          body: JSON.stringify({email, password: pass})
+        });
+        const data = await res.json();
+        document.getElementById("status").innerText = 
+          res.ok ? "Signup success!" : data.error || data.detail;
+      } catch(e) {
+        document.getElementById("status").innerText = "Error: " + e.message;
+      }
+    }
+    
+   async function login() {
+  const email = document.getElementById("email").value;
+  const pass = document.getElementById("pass").value;
+  document.getElementById("status").innerText = "Logging in...";
+  
+  try {
+    const res = await fetch(API_BASE + "/login", {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({email, password: pass})
+    });
+    const data = await res.json();
+    if (res.ok) {
+      localStorage.setItem("token", data.access_token);  // SAVE TOKEN
+      window.location.href = "dashboard.html";           // GO TO DASHBOARD
+    } else {
+      document.getElementById("status").innerText = data.error || data.detail;
+    }
+  } catch(e) {
+    document.getElementById("status").innerText = "Error: " + e.message;
+  }
+}
+  </script>
+</body>
+</html>

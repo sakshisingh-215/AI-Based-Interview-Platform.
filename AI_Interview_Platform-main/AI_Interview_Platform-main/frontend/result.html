@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>AI Interview Results</title>
+  <style>
+    body { font-family: sans-serif; max-width: 600px; margin: 50px auto; padding: 20px; }
+    .score-circle { font-size: 4em; color: #4CAF50; text-align: center; margin: 20px 0; }
+    .feedback { background: #f5f5f5; padding: 15px; margin: 10px 0; border-radius: 8px; }
+    .strengths { color: #2E7D32; }
+    .weaknesses { color: #D32F2F; }
+    button { padding: 12px 24px; background: #2196F3; color: white; border: none; border-radius: 6px; cursor: pointer; }
+  </style>
+</head>
+<body>
+  <h1>Interview Complete!</h1>
+  
+  <div id="results-container">
+    <div class="score-circle" id="final-score">85%</div>
+    <h2 id="role-name">Data Scientist</h2>
+    
+    <div class="feedback strengths">
+      <h3>Strengths:</h3>
+      <ul id="strengths-list"></ul>
+    </div>
+    
+    <div class="feedback weaknesses">
+      <h3> Areas to Improve:</h3>
+      <ul id="weaknesses-list"></ul>
+    </div>
+    
+    <div style="text-align: center; margin: 30px 0;">
+      <button onclick="newInterview()">New Interview</button>
+      <button onclick="logout()">Logout</button>
+    </div>
+  </div>
+
+  <script>
+    // Load interview results from sessionStorage
+    const lastInterviewId = sessionStorage.getItem("lastInterviewId");
+    const interviewData = JSON.parse(sessionStorage.getItem("currentInterview") || "{}");
+    
+    if (!interviewData.questions) {
+      document.getElementById("results-container").innerHTML = 
+        "<h2>No interview data found</h2><p><a href='dashboard.html'>Go to Dashboard</a></p>";
+    } else {
+      document.getElementById("role-name").textContent = interviewData.role;
+      
+      // Mock final score (replace with real data later)
+      const avgScore = Math.floor(Math.random() * 30 + 65); // 65-95%
+      document.getElementById("final-score").textContent = avgScore + "%";
+      
+      // Mock feedback summary
+      document.getElementById("strengths-list").innerHTML = `
+        <li>Clear communication and structure</li>
+        <li>Good technical understanding</li>
+        <li>Confident delivery</li>
+      `;
+      
+      document.getElementById("weaknesses-list").innerHTML = `
+        <li>Add more specific examples from projects</li>
+        <li>Practice time management (2 min answers)</li>
+        <li>Mention trade-offs for key decisions</li>
+      `;
+    }
+
+    function newInterview() {
+      sessionStorage.clear();
+      window.location.href = "dashboard.html";
+    }
+    
+    function logout() {
+      localStorage.removeItem("token");
+      sessionStorage.clear();
+      window.location.href = "index.html";
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,63 @@
+<!DOCTYPE
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Dashboard - AI Interview</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div class="container">
+  <h2>Dashboard</h2>
+  <p>Select a role and start an AI voice interview.</p>
+
+  <div class="input-group">
+    <label for="role">Job role</label>
+    <select id="role">
+      <option>Data Scientist</option>
+      <option>Software Engineer</option>
+      <option>Product Manager</option>
+    </select>
+  </div>
+
+  <button id="start-btn">Start Interview</button>
+  <button class="secondary" id="logout-btn">Logout</button>
+
+  <div class="error" id="dash-error"></div>
+</div>
+
+<script src="main.js"></script>
+<script>
+  if (!getToken()) {
+    window.location.href = "index.html";
+  }
+
+  document.getElementById("logout-btn").onclick = () => {
+    localStorage.removeItem("token");
+    window.location.href = "index.html";
+  };
+
+  document.getElementById("start-btn").onclick = async () => {
+    const role = document.getElementById("role").value;
+    const err = document.getElementById("dash-error");
+    err.textContent = "";
+
+    try {
+      const res = await fetch(API_BASE + "/start_interview", {
+        method: "POST",
+        headers: authHeaders(),
+        body: JSON.stringify({ role }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        err.textContent = data.detail || "Error starting interview";
+      } else {
+        sessionStorage.setItem("currentInterview", JSON.stringify(data));
+        window.location.href = "interview.html";
+      }
+    } catch (e) {
+      err.textContent = "Network error";
+    }
+  };
+</script>
+</body>
+</html>

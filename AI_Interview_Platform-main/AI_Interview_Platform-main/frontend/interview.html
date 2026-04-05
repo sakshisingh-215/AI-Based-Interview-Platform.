@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>AI Interview - Live</title>
+  <link rel="stylesheet" href="styles.css">
+  <style>
+    body { 
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; 
+      margin: 0; 
+      padding: 20px; 
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+    }
+    .container { max-width: 800px; margin: 0 auto; background: white; border-radius: 20px; box-shadow: 0 20px 40px rgba(0,0,0,0.1); padding: 30px; }
+    .interview-header { text-align: center; margin-bottom: 30px; }
+    .progress-bar { background: #e0e0e0; height: 10px; border-radius: 5px; overflow: hidden; margin: 20px 0; }
+    #progress-fill { background: linear-gradient(90deg, #4CAF50, #45a049); height: 100%; transition: width 0.3s ease; }
+    .question-container { background: #f8f9ff; padding: 30px; border-radius: 15px; margin: 20px 0; text-align: center; }
+    .question { font-size: 1.4em; font-weight: 600; color: #333; line-height: 1.5; }
+    .controls { display: flex; gap: 15px; justify-content: center; margin: 30px 0; }
+    .record-btn { padding: 15px 30px; font-size: 1.1em; border: none; border-radius: 50px; cursor: pointer; font-weight: 600; transition: all 0.3s; }
+    .record-btn:not(:disabled) { background: #ff4757; color: white; box-shadow: 0 5px 15px rgba(255,71,87,0.4); }
+    .record-btn:disabled { background: #6c757d; color: white; cursor: not-allowed; }
+    .skip-btn { padding: 15px 30px; background: #6c757d; color: white; border: none; border-radius: 50px; font-weight: 600; cursor: pointer; transition: all 0.3s; }
+    .transcript { background: #f1f3f4; padding: 20px; border-radius: 10px; margin: 20px 0; min-height: 60px; font-family: monospace; white-space: pre-wrap; }
+    .chat-container { max-height: 300px; overflow-y: auto; margin: 20px 0; }
+    .message { padding: 15px; margin: 10px 0; border-radius: 15px; max-width: 80%; }
+    .message.ai { background: #e3f2fd; margin-left: auto; text-align: right; }
+    .message.user { background: #f0f0f0; }
+    .error { color: #d32f2f; text-align: center; margin: 20px 0; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="interview-header">
+      <h2 id="role-title">Loading...</h2>
+      <div class="progress-bar">
+        <div id="progress-fill" style="width: 0%"></div>
+      </div>
+      <span id="progress-text">Question 1/5</span>
+    </div>
+
+    <div class="question-container">
+      <div id="question-text" class="question">Loading question...</div>
+    </div>
+
+    <div class="controls">
+      <button id="record-btn" class="record-btn">Record Answer</button>
+      <button id="skip-btn" class="skip-btn">Skip Question</button>
+    </div>
+
+    <div id="live-transcript" class="transcript">Click Record to start speaking...</div>
+    
+    <div class="chat-container" id="chat-container"></div>
+    <div class="error" id="int-error"></div>
+  </div>
+
+  <script>
+    // Global variables
+    let currentInterview = {};
+    let currentQuestionIndex = 0;
+    const API_BASE = "http://127.0.0.1:8001";
+
+    document.addEventListener("DOMContentLoaded", initInterview);
+
+    function initInterview() {
+      const storedInterview = sessionStorage.getItem("currentInterview");
+      if (!storedInterview) {
+        alert("No interview found. Redirecting to dashboard...");
+        window.location.href = "dashboard.html";
+        return;
+      }
+
+      currentInterview = JSON.parse(storedInterview);
+      document.getElementById("role-title").textContent = currentInterview.role || "Technical Interview";
+      currentQuestionIndex = 0;
+      updateProgress();
+      loadCurrentQuestion();
+
+      document.getElementById("record-btn").onclick = toggleRecording;
+      document.getElementById("skip-btn").onclick = skipQuestion;
+    }
+
+    function loadCurrentQuestion() {
+      if (currentQuestionIndex < currentInterview.questions?.length) {
+        const question = currentInterview.questions[currentQuestionIndex];
+        document.getElementById("question-text").textContent = `${currentQuestionIndex + 1}. ${question}`;
+        document.getElementById("live-transcript").textContent = "Click Record to start speaking...";
+      } else {
+        window.location.href = "result.html";
+      }
+    }
+
+    function updateProgress() {
+      const progress = ((currentQuestionIndex + 1) / 5) * 100;
+      document.getElementById("progress-fill").style.width = progress + "%";
+      document.getElementById("progress-text").textContent = `Question ${currentQuestionIndex + 1}/5`;
+    }
+
+    function toggleRecording() {
+      if (!isRecording) {
+        startRecording();
+      } else {
+        stopRecording();
+      }
+    }
+
+    let isRecording = false;
+    let recognition = null;
+
+    function startRecording() {
+      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      if (!SpeechRecognition) {
+        alert("Speech recognition requires Chrome. Please use Chrome browser.");
+        return;
+      }
+
+      isRecording = true;
+      const recordBtn = document.getElementById("record-btn");
+      recordBtn.textContent = "STOP RECORDING";
+      recordBtn.className = "record-btn";
+      document.getElementById("live-transcript").textContent = "🔴 Listening... Speak now!";
+
+      recognition = new SpeechRecognition();
+      recognition.continuous = true;
+      recognition.interimResults = true;
+      recognition.lang = 'en-US';
+
+      recognition.onresult = (e) => {
+        let transcript = "";
+        for (let i = e.resultIndex; i < e.results.length; i++) {
+          transcript += e.results[i][0].transcript;
+        }
+        document.getElementById("live-transcript").textContent = transcript || "Speak louder...";
+      };
+
+      recognition.onerror = (e) => {
+        console.error("Speech error:", e.error);
+        document.getElementById("live-transcript").textContent = `Error: ${e.error}`;
+      };
+
+      // FIXED: No auto-restart, no character check
+      recognition.onend = () => {
+        console.log("Speech ended - waiting for manual stop");
+      };
+
+      recognition.start();
+    }
+
+    function stopRecording() {
+      console.log("Manual stop clicked!");
+      
+      isRecording = false;
+      if (recognition) {
+        recognition.stop();
+        recognition = null;
+      }
+      
+      const recordBtn = document.getElementById("record-btn");
+      recordBtn.textContent = "Record Answer";
+      recordBtn.className = "record-btn";
+
+      // 🔥 NEW WORD-BASED VALIDATION (NO "20+ characters"!)
+      let rawTranscript = document.getElementById("live-transcript").textContent;
+      let cleanTranscript = rawTranscript
+        .replace(/listening|speaking|recording|louder|error|🔴|📝|❌|🎤|Speak/gi, '')
+        .replace(/[^\w\s.,!?]/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim();
+
+      const words = cleanTranscript.split(/\s+/).filter(word => word.length >= 2);
+      const wordCount = words.length;
+
+      console.log(" Words:", wordCount, "Transcript:", `"${cleanTranscript}"`);
+
+      if (wordCount < 5) {
+        alert(` Need 5+ words! You said ${wordCount} words: "${cleanTranscript}"\n\nTry: "I am preparing for data science interview"`);
+        document.getElementById("live-transcript").textContent = cleanTranscript || "Try 5+ words...";
+        return;
+      }
+
+      // ✅ SUCCESS - Evaluate answer
+      document.getElementById("live-transcript").textContent = ` ${wordCount} words - Evaluating...`;
+      evaluateAnswer(cleanTranscript);
+    }
+
+    async function evaluateAnswer(transcript) {
+      try {
+        document.getElementById("int-error").textContent = "Evaluating...";
+        
+        const res = await fetch(`${API_BASE}/evaluate_answer`, {
+          method: "POST",
+          headers: { 
+            "Content-Type": "application/json",
+            "Authorization": "Bearer " + localStorage.getItem("token")
+          },
+          body: JSON.stringify({
+            interview_id: currentInterview.interview_id,
+            question_index: currentQuestionIndex,
+            question_text: currentInterview.questions[currentQuestionIndex],
+            user_answer: transcript
+          }),
+        });
+        
+        const data = await res.json();
+        
+        if (!res.ok) {
+          throw new Error(data.detail || "Evaluation failed");
+        }
+
+        addMessage(
+          `Score: ${data.feedback.score}/10\n` +
+          `Strengths: ${data.feedback.strengths}\n` +
+          `Improve: ${data.feedback.weaknesses}\n` +
+          `Tip: ${data.feedback.advice}`,
+          "ai"
+        );
+
+        if (currentQuestionIndex < 4) {
+          currentQuestionIndex++;
+          updateProgress();
+          loadCurrentQuestion();
+        } else {
+          sessionStorage.setItem("lastInterviewId", currentInterview.interview_id);
+          window.location.href = "result.html";
+        }
+      } catch (e) {
+        document.getElementById("int-error").textContent = "Network error: " + e.message;
+        console.error(e);
+      }
+    }
+
+    function skipQuestion() {
+      currentQuestionIndex++;
+      updateProgress();
+      loadCurrentQuestion();
+    }
+
+    function addMessage(text, sender) {
+      const chat = document.getElementById("chat-container");
+      const msg = document.createElement("div");
+      msg.className = `message ${sender}`;
+      msg.textContent = text;
+      chat.appendChild(msg);
+      chat.scrollTop = chat.scrollHeight;
+    }
+  </script>
+</body>
+</html>
